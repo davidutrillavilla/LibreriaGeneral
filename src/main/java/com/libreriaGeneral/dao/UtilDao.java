@@ -344,7 +344,7 @@ public enum UtilDao {
     public boolean delete(String tabla, String id) throws SQLException {
 
         try {
-            DataBaseManager dataBaseManager = UtilDao.INSTANCE.getDataBaseManager();
+            DataBaseManager dataBaseManager = getDataBaseManager();
 
             String schema = ConstantesGenerales.SCHEMA_GENERAL;
 
