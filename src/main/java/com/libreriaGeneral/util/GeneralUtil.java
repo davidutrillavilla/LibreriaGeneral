@@ -1,5 +1,7 @@
 package com.libreriaGeneral.util;
 
+import org.openxava.annotations.View;
+
 import javax.persistence.*;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
@@ -170,5 +172,9 @@ public enum GeneralUtil {
         }
     }
 
+    public void validadorDatosEntrada(View view) {
+
+
+    }
 }
 
