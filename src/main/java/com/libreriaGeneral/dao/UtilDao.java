@@ -1,6 +1,7 @@
 package com.libreriaGeneral.dao;
 
-import com.libreriaGeneral.util.ConstantesGenerales;
+import org.openxava.jpa.XPersistence;
+import org.openxava.util.Users;
 
 import javax.persistence.PrePersist;
 import javax.transaction.Transactional;
@@ -9,6 +10,8 @@ import java.lang.reflect.Method;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.logging.Logger;
 
 public enum UtilDao {
@@ -16,6 +19,40 @@ public enum UtilDao {
     INSTANCE;
 
     private Logger log = Logger.getLogger("log");
+
+    private static final Map<String, String> CACHE_ESQUEMAS = new ConcurrentHashMap<>();
+
+    private static final String SCHEMA_POR_DEFECTO = "general.";
+
+    public static String getEsquemaUsuario() {
+
+        String username = Users.getCurrent();
+
+        if (username == null) return SCHEMA_POR_DEFECTO;
+
+        return CACHE_ESQUEMAS.computeIfAbsent(username, UtilDao::consultarEsquemaEnBD);
+    }
+
+    private static String consultarEsquemaEnBD(String username) {
+
+        String[] partes = username.split("\\.");
+
+        String user = partes[0];
+
+        String aplicacion = partes[1];
+
+        try {
+            return XPersistence.getManager()
+                .createQuery("select u.esquema from Usuario u where u.nombreUsuario = :user and u.aplicacion = :aplicacion", String.class)
+                .setParameter("user", user)
+                .setParameter("aplicacion", aplicacion)
+                .getSingleResult();
+
+        } catch (Exception e) {
+
+            return SCHEMA_POR_DEFECTO;
+        }
+    }
 
     public DataBaseManager getDataBaseManager() throws SQLException {
 
@@ -80,7 +117,8 @@ public enum UtilDao {
         }
 
         // 3. Preparar el UPDATE filtrando Enums y el propio ID
-        String schema = ConstantesGenerales.SCHEMA_GENERAL;
+
+        String schema = getEsquemaUsuario();
 
         String tableName = clazz.getSimpleName().toLowerCase();
 
@@ -173,7 +211,7 @@ public enum UtilDao {
             }
         }
 
-        String schema = ConstantesGenerales.SCHEMA_GENERAL;
+        String schema = getEsquemaUsuario();
 
         String tableName = clazz.getSimpleName().toLowerCase(); // Suponiendo que el nombre de la tabla es igual al nombre de la clase
 
@@ -186,8 +224,6 @@ public enum UtilDao {
         boolean primerCampo = true;
 
         for (Field field : fields) {
-            // FILTRO IDÉNTICO: No incluimos Enums en el SQL
-            if (field.getType().isEnum()) continue;
 
             if (!primerCampo) {
 
@@ -214,12 +250,6 @@ public enum UtilDao {
 
                 fields[i].setAccessible(true);
 
-                // FILTRO IDÉNTICO: Saltamos los Enums
-                if (fields[i].getType().isEnum()) {
-
-                    continue;
-                }
-
                 Object value = fields[i].get(object);
 
                 Object valueToPersist = null;
@@ -229,6 +259,12 @@ public enum UtilDao {
                     if (value.getClass().isAnnotationPresent(javax.persistence.Entity.class)) {
 
                         valueToPersist = obtenerIdDeEntidad(value);
+
+                    }
+
+                    if(fields[i].getType().isEnum()) {
+
+                        valueToPersist = ((Enum<?>) value).name();
 
                     } else {
 
@@ -255,7 +291,7 @@ public enum UtilDao {
         try {
             DataBaseManager dataBaseManager = getDataBaseManager();
 
-            String schema = ConstantesGenerales.SCHEMA_GENERAL;
+            String schema = getEsquemaUsuario();
 
             String sql = String.format(QueryConstants.SQL_FIND, schema, tabla);
 
@@ -317,7 +353,7 @@ public enum UtilDao {
 
         Class<?> clazz = object.getClass();
 
-        String schema = ConstantesGenerales.SCHEMA_GENERAL;
+        String schema = getEsquemaUsuario();
 
         String tableName = clazz.getSimpleName().toLowerCase(); // Suponiendo que el nombre de la tabla es igual al nombre de la clase
 
@@ -346,7 +382,7 @@ public enum UtilDao {
         try {
             DataBaseManager dataBaseManager = getDataBaseManager();
 
-            String schema = ConstantesGenerales.SCHEMA_GENERAL;
+            String schema = getEsquemaUsuario();
 
             String sql = String.format(QueryConstants.SQL_DELETE_ID, schema, tabla);
 
