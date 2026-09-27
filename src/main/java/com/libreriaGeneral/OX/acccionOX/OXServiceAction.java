@@ -32,7 +32,7 @@ public abstract class OXServiceAction<J> extends OXViewBaseAction<J> {
         }catch (Exception var3){
 
             var3.printStackTrace(); // <--- ESTO te mostrará el error REAL en la consola
-            throw new ValidationException("Error real: " + var3.getMessage());
+            throw new ValidationException(var3.getMessage());
 
         }
     }
